@@ -8,7 +8,7 @@ import com.project.ecom.auth_service.models.SessionStatus;
 import com.project.ecom.auth_service.models.User;
 import com.project.ecom.auth_service.repositories.ISessionRepository;
 import com.project.ecom.auth_service.repositories.IUserRepository;
-import org.apache.commons.lang3.RandomStringUtils;
+import com.project.ecom.auth_service.utils.JwtTokenBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -56,7 +56,7 @@ public class AuthService implements IAuthService {
         calendar.add(Calendar.HOUR, 1);
         session.setExpiryDate(calendar.getTime());
 
-        session.setToken(RandomStringUtils.randomAscii(24));
+        session.setToken(JwtTokenBuilder.from(user));  // Using jjwt
         return this.sessionRepo.save(session);
     }
 
