@@ -96,16 +96,27 @@ public class SpringSecurityConfig {
 
         return new InMemoryUserDetailsManager(userDetails);
     }
+    /*
+    Test with Browser:
+    http://127.0.0.1:8080/oauth2/authorize?response_type=code&client_id=oidc-client&redirect_uri=http://127.0.0.1:8080/login/oauth2/code/oidc-client&scope=openid profile
 
+    Test with Postman:
+    Grant Type: Authorization Code
+    Callback URL: https://oauth.pstmn.io/v1/callback
+    Auth URL: http://127.0.0.1:8080/oauth2/authorize
+    Access Token URL: http://127.0.0.1:8080/oauth2/token
+
+     */
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
         RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("oidc-client")
-                .clientSecret("{noop}secret")
+                .clientSecret("{noop}secret")  // {noop} stands for "No Operation" for password encoding
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")
+//                .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")  // Test with Browser
+                .redirectUri("https://oauth.pstmn.io/v1/callback")  // Test with Postman
                 .postLogoutRedirectUri("http://127.0.0.1:8080/")
                 .scope(OidcScopes.OPENID)
                 .scope(OidcScopes.PROFILE)
