@@ -13,7 +13,7 @@ public class User extends BaseModel {
     private String email;
     private String password;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)  // Addressing LazyInitializationException while fetching the GrantedAuthorities
     @JoinTable(
             name = "user_role",
             joinColumns = @JoinColumn(name = "user_id"),
