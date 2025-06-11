@@ -276,6 +276,7 @@ public class SpringSecurityConfig {
     Access Token URL: http://127.0.0.1:8080/oauth2/token
 
      */
+    /* DISABLED in-memory registeredClient
     @Bean
     @Order(4)
     public RegisteredClientRepository registeredClientRepository(PasswordEncoder passwordEncoder) {
@@ -295,6 +296,8 @@ public class SpringSecurityConfig {
 
         return new InMemoryRegisteredClientRepository(oidcClient);
     }
+
+     */
 
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
