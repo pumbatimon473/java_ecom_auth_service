@@ -1,5 +1,6 @@
 package com.project.ecom.auth_service.security;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
@@ -12,10 +13,15 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -23,11 +29,14 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -40,9 +49,61 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
+import javax.crypto.spec.SecretKeySpec;
+
 @Configuration
 @EnableWebSecurity
 public class SpringSecurityConfig {
+
+    /*
+    classic issue: CSRF protection interfering with stateless API access using a bearer token.
+
+    🔍 What's Happening
+    You're sending a Bearer <access-token> in the Authorization header (which is correct for OAuth2), but Spring Security's CSRF protection is still active, and it's rejecting your request because it's a POST without a CSRF token.
+    This is normal behavior when CSRF protection is enabled and sessions are used — which isn't the case for OAuth2 resource servers, where everything is stateless.
+
+    🧠 Why disable CSRF for APIs?
+    CSRF is only required for cookie-based session authentication (like browser logins).
+    If you're using OAuth2 Bearer tokens in Authorization header, you're already protected.
+    So CSRF is redundant and counterproductive for stateless APIs.
+
+    Meaning of: authorize.anyRequest().authenticated()
+    - Every HTTP request, regardless of its path or method, must be authenticated — i.e., the user must be logged in or present a valid token.
+
+    🔍 Breakdown
+    authorize — this is the authorization configuration block.
+    .anyRequest() — matches all requests, including static assets (/css/**, /favicon.ico, etc.).
+    .authenticated() — requires the request to be made by an authenticated principal (user or client).
+
+    🔒 What it enforces
+    It ensures that:
+    For login-based flows: the user must be logged in via a form.
+    For OAuth2: the client must send a valid Authorization: Bearer <token> header.
+
+    If not, Spring Security:
+    Redirects to the login page (for browser requests), or
+    Returns 401 Unauthorized (for API requests with missing/invalid tokens).
+
+    🧠 Common Alternatives
+    Code	Meaning
+    .permitAll()	Allow access to this request path without authentication.
+    .denyAll()	Deny all access — return 403 for everyone.
+    .hasRole("ADMIN")	Allow access only if the authenticated user has the ROLE_ADMIN authority.
+    .hasAuthority("SCOPE_read")	Used in OAuth2 to check for scopes in JWT.
+
+    👇 Example
+    http
+      .authorizeHttpRequests(authorize -> authorize
+          .requestMatchers("/public/**").permitAll()
+          .requestMatchers("/admin/**").hasRole("ADMIN")
+          .anyRequest().authenticated()
+      );
+    /public/** → open to everyone.
+    /admin/** → only accessible to users with ROLE_ADMIN.
+    Everything else → requires login or token.
+
+
+     */
 
     @Bean
     @Order(1)
@@ -73,17 +134,40 @@ public class SpringSecurityConfig {
         return http.build();
     }
 
+
+
+    /*
+    🧨 Issue
+    Your defaultSecurityFilterChain is treating all requests (including API endpoints) as stateful form login-based requests and does not disable CSRF, which breaks stateless requests authenticated via Authorization: Bearer.
+
+    ✅ What to Fix
+    You need to update your defaultSecurityFilterChain to:
+    Disable CSRF for stateless endpoints (e.g., /api/**).
+    Enable OAuth2 Resource Server support (so it validates JWTs or opaque tokens).
+
+     */
     @Bean
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
             throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
+                        .requestMatchers("/api/auth/signup").permitAll()  // allowing signup and login apis without authentication
+                        .requestMatchers("/api/auth/login").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Form login handles the redirect to the login page from the
                 // authorization server filter chain
-                .formLogin(Customizer.withDefaults());
+                .formLogin(Customizer.withDefaults())
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/**")  // DISABLE CSRF for REST APIs
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        // DISABLED: as it expects a spring generated JWT signed with RS256 (OAuth2 client)
+                        .jwt(Customizer.withDefaults())  // Enabling OAuth2 Resource Server, so that it validated JWT tokens
+
+                        // .jwt(jwt -> jwt.decoder(jwtDecoder()))  // For custom JJWT token
+                );
 
         return http.build();
     }
@@ -102,6 +186,23 @@ public class SpringSecurityConfig {
 
      */
 
+    /* EXPERIMENT: trying to check if {noop} encoder prefix works as in .clientSecret("{noop}secret")
+    - Status: FAILED
+        - Tried everything but could not make it work!
+        - Using BCryptPasswordEncoder as the default password encoder
+
+    ✅ When does {noop} work?
+    {noop} only works if you're using a DelegatingPasswordEncoder which supports {noop} as a prefix.
+    This DelegatingPasswordEncoder looks at the prefix ({noop}, {bcrypt}, etc.) and chooses the correct encoder.
+
+     */
+//    @Bean
+//    @Order(3)  // Forcing passwordEncoder bean to be created before registeredClientRepository to ensure {noop} works
+//    public PasswordEncoder defaultPasswordEncoder() {
+//        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+//    }
+
+
     /*
     Test with Browser:
     http://127.0.0.1:8080/oauth2/authorize?response_type=code&client_id=oidc-client&redirect_uri=http://127.0.0.1:8080/login/oauth2/code/oidc-client&scope=openid profile
@@ -114,14 +215,15 @@ public class SpringSecurityConfig {
 
      */
     @Bean
-    public RegisteredClientRepository registeredClientRepository() {
+    @Order(4)
+    public RegisteredClientRepository registeredClientRepository(PasswordEncoder passwordEncoder) {
         RegisteredClient oidcClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("oidc-client")
-                .clientSecret("{noop}secret")  // {noop} stands for "No Operation" for password encoding
+                .clientSecret(passwordEncoder.encode("secret"))  // {noop} stands for "No Operation" for password encoding
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-//                .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")  // Test with Browser
+                // .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")  // Test with Browser
                 .redirectUri("https://oauth.pstmn.io/v1/callback")  // Test with Postman
                 .postLogoutRedirectUri("http://127.0.0.1:8080/")
                 .scope(OidcScopes.OPENID)
@@ -170,12 +272,33 @@ public class SpringSecurityConfig {
 
     /*
     Addressing the below issue: Approach 1 - Creating a bean of PasswordEncoder (visible through the app context)
-
     java.lang.IllegalArgumentException: Given that there is no default password encoder configured, each password must have a password encoding prefix. Please either prefix this password with '{noop}' or set a default password encoder in .
+
+    NOTE: BCryptPasswordEncoder doesn’t know what to do with {noop} — it expects a $2a$-style hash.
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /*
+    🧨 Issue
+    BadJwtException: An error occurred while attempting to decode the Jwt: Signed JWT rejected: Another algorithm expected, or no matching key(s) found
+    Since I am using JJWT token, spring has no idea about how to decode it when "OAuth2 Resource Server" is enabled
+    .oauth2ResourceServer(oauth2 -> oauth2
+        .jwt(Customizer.withDefaults())  // Expects spring generated JWT signed with RS256
+    )
+
+    ✅ Fix
+    Add custom decoder bean: Decodes a JWT signed with HS256 (HMAC + secret) - generated using JJWT
+
+     */
+    JwtDecoder jwtDecoder() {
+        byte[] secret = System.getenv("JWT_SECRET").getBytes(StandardCharsets.UTF_8);
+        SecretKeySpec secretKey = new SecretKeySpec(secret, "HmacSHA256");
+        return NimbusJwtDecoder.withSecretKey(secretKey)
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
     }
 
 }

@@ -10,7 +10,7 @@ import com.project.ecom.auth_service.repositories.ISessionRepository;
 import com.project.ecom.auth_service.repositories.IUserRepository;
 import com.project.ecom.auth_service.utils.JwtTokenBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,12 +21,13 @@ import java.util.Optional;
 public class AuthService implements IAuthService {
     private IUserRepository userRepo;
     private ISessionRepository sessionRepo;
-    private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public AuthService(IUserRepository userRepo, ISessionRepository sessionRepo) {
+    public AuthService(IUserRepository userRepo, ISessionRepository sessionRepo, @Qualifier("passwordEncoder") PasswordEncoder passwordEncoder) {
         this.userRepo = userRepo;
         this.sessionRepo = sessionRepo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
