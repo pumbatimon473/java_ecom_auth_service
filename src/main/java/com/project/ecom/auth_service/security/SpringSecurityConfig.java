@@ -44,6 +44,8 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
@@ -134,7 +136,18 @@ public class SpringSecurityConfig {
         return http.build();
     }
 
-
+    // Created for public endpoints for which no auth token is required
+    @Bean
+    @Order(2)
+    SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/auth/public/**")  // only matches public apis (requires no auth token)
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().permitAll()
+                )
+                .csrf(csrf -> csrf.disable());
+        return http.build();  // No OAuth2ResourceServer here
+    }
 
     /*
     🧨 Issue
@@ -145,15 +158,65 @@ public class SpringSecurityConfig {
     Disable CSRF for stateless endpoints (e.g., /api/**).
     Enable OAuth2 Resource Server support (so it validates JWTs or opaque tokens).
 
+    🧨 Issue
+    Authorization token (if passed) is still being validated for permitted requests (signup and login)
+
+    Reason:
+    permitAll() only affects authorization.
+    But the Bearer-token authentication filter runs before authorization; if it sees an Authorization: Bearer … header it must try to validate it.
+
+    ✅ Fix:
+    To ignore any Bearer token on selected paths you have two good options.
+    1) Put the public endpoints in their own filter-chain (simplest)
+    2) Keep one chain and use a custom BearerTokenResolver
+
+    // — chain for SIGN-UP / LOGIN ——————————————————————————
+    @Bean @Order(1)
+    SecurityFilterChain authEndpoints(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher("/api/auth/**")        // <-- match only these paths
+            .authorizeHttpRequests(a -> a.anyRequest().permitAll())
+            ...
+    }
+
+    // — chain for everything else ————————————————————————
+    @Bean @Order(2)
+    SecurityFilterChain api(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(a -> a.anyRequest().authenticated())
+            ...
+    }
+
+    OR, plugin a custom bearer token resolver
+
+    @Bean
+    BearerTokenResolver customBearerTokenResolver() {
+        DefaultBearerTokenResolver resolver = new DefaultBearerTokenResolver();
+        return request -> {
+            String path = request.getRequestURI();
+            if (path.startsWith("/api/auth")) {
+                return null;
+            }
+            return resolver.resolve(request);
+        };
+    }
+
+    @Bean
+    SecurityFilterChain api(HttpSecurity http) throws Exception {
+        http
+            ...
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .bearerTokenResolver(bearerTokenResolver())   // ⬅️ plug it in
+                .jwt(jwt -> jwt.decoder(jwtDecoder()))
+            ...
+    }
      */
     @Bean
-    @Order(2)
+    @Order(3)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http)
             throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers("/api/auth/signup").permitAll()  // allowing signup and login apis without authentication
-                        .requestMatchers("/api/auth/login").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Form login handles the redirect to the login page from the
@@ -165,7 +228,6 @@ public class SpringSecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         // DISABLED: as it expects a spring generated JWT signed with RS256 (OAuth2 client)
                         .jwt(Customizer.withDefaults())  // Enabling OAuth2 Resource Server, so that it validated JWT tokens
-
                         // .jwt(jwt -> jwt.decoder(jwtDecoder()))  // For custom JJWT token
                 );
 

@@ -23,13 +23,13 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/signup")
+    @PostMapping("/public/signup")
     public ResponseEntity<UserDto> signup(@RequestBody SignupRequestDto requestDto) {
         User user = this.authService.signup(requestDto.getEmail(), requestDto.getPassword());
         return ResponseEntity.status(HttpStatus.CREATED).body(UserDto.from(user));
     }
 
-    @PostMapping("/login")
+    @PostMapping("/public/login")
     public ResponseEntity<UserDto> login(@RequestBody LoginRequestDto requestDto) {
         Session session = this.authService.login(requestDto.getEmail(), requestDto.getPassword());
         HttpHeaders headers = new HttpHeaders();
