@@ -1,6 +1,7 @@
 package com.project.ecom.auth_service.controllers;
 
 import com.project.ecom.auth_service.dtos.CreateRoleRequestDto;
+import com.project.ecom.auth_service.dtos.CreateRoleResponseDto;
 import com.project.ecom.auth_service.dtos.SetRolesToUserReqDto;
 import com.project.ecom.auth_service.models.Role;
 import com.project.ecom.auth_service.services.IRoleService;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/role")
+@RequestMapping("/api/admin/role")
 public class RoleController {
     private IRoleService roleService;
 
@@ -23,9 +24,9 @@ public class RoleController {
     }
 
     @PostMapping
-    ResponseEntity<Role> createNewRole(@RequestBody CreateRoleRequestDto requestDto) {
+    ResponseEntity<CreateRoleResponseDto> createNewRole(@RequestBody CreateRoleRequestDto requestDto) {
         Role role = this.roleService.createNewRole(requestDto.getRoleName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(role);
+        return ResponseEntity.status(HttpStatus.CREATED).body(CreateRoleResponseDto.from(role));
     }
 
     @PostMapping("/assign")

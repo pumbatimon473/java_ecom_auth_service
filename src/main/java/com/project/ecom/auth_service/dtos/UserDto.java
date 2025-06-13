@@ -11,14 +11,18 @@ import java.util.List;
 @Setter
 public class UserDto {
     private Long userId;
+    private String firstName;
+    private String lastName;
     private String email;
-    private List<Role> roles;
+    private List<String> roles;
 
     public static UserDto from(User user) {
         UserDto userDto = new UserDto();
         userDto.setUserId(user.getId());
+        userDto.setFirstName(user.getFirstName());
+        userDto.setLastName(user.getLastName());
         userDto.setEmail(user.getEmail());
-        userDto.setRoles(user.getRoles());
+        userDto.setRoles(user.getRoles().stream().map(Role::getName).toList());
         return userDto;
     }
 }

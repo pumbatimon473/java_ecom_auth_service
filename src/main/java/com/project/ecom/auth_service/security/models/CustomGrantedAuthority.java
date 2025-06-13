@@ -27,7 +27,7 @@ public class CustomGrantedAuthority implements GrantedAuthority {
     private String authority;
 
     public CustomGrantedAuthority(Role role) {
-        this.authority = role.getName();
+        this.authority = "ROLE_" + role.getName();  // prefixed with ROLE_ (expected by spring)
     }
 
     @Override

@@ -21,11 +21,11 @@ public class JwtTokenBuilder {
         Date exp = calendar.getTime();
 
         return Jwts.builder()
-                .subject(user.getId().toString())
+                .subject(user.getEmail())
                 .issuer("ecom_auth_service")
                 .issuedAt(iat)
                 .expiration(exp)
-                .claim("email", user.getEmail())
+                .claim("user_id", user.getId())
                 .signWith(SignatureAlgorithm.HS256, JwtTokenBuilder.SECRET.getBytes(StandardCharsets.UTF_8))
                 .compact();
     }

@@ -25,7 +25,7 @@ public class AuthController {
 
     @PostMapping("/public/signup")
     public ResponseEntity<UserDto> signup(@RequestBody SignupRequestDto requestDto) {
-        User user = this.authService.signup(requestDto.getEmail(), requestDto.getPassword());
+        User user = this.authService.signup(requestDto.getEmail(), requestDto.getPassword(), requestDto.getFirstName(), requestDto.getLastName());
         return ResponseEntity.status(HttpStatus.CREATED).body(UserDto.from(user));
     }
 

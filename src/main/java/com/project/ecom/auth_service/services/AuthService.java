@@ -31,12 +31,14 @@ public class AuthService implements IAuthService {
     }
 
     @Override
-    public User signup(String email, String password) {
+    public User signup(String email, String password, String firstName, String lastName) {
         Optional<User> userOptional = this.userRepo.findByEmail(email);
         if (userOptional.isPresent())
             throw new UserAlreadyExistsException(email);
         // create a new user
         User user = new User();
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         return this.userRepo.save(user);

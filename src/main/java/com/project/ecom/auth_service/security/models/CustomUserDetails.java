@@ -2,6 +2,7 @@ package com.project.ecom.auth_service.security.models;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.project.ecom.auth_service.models.User;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -46,6 +47,8 @@ Solution: Repeat the same process for CustomGrantedAuthority
 @NoArgsConstructor
 public class CustomUserDetails implements UserDetails {
     // private User user;
+    @Getter
+    private Long userId;
     private List<? extends GrantedAuthority> authorities;
     private String password;
     private String username;
@@ -55,6 +58,7 @@ public class CustomUserDetails implements UserDetails {
     private Boolean enabled;
 
     public CustomUserDetails(User user) {
+        this.userId = user.getId();
         this.username = user.getEmail();
         this.password = user.getPassword();  // ** note: user password is stored in encoded form
         // what we call a user's Role, spring security is calling it a GrantedAuthority
@@ -100,4 +104,5 @@ public class CustomUserDetails implements UserDetails {
     public boolean isEnabled() {
         return this.enabled;
     }
+
 }

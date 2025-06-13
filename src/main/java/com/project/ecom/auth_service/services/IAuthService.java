@@ -5,7 +5,7 @@ import com.project.ecom.auth_service.models.SessionStatus;
 import com.project.ecom.auth_service.models.User;
 
 public interface IAuthService {
-    User signup(String email, String password);
+    User signup(String email, String password, String firstName, String lastName);
 
     Session login(String email, String password);
 
