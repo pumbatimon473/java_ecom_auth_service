@@ -13,11 +13,20 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 
+import com.project.ecom.auth_service.security.ropc.OAuth2PasswordAuthenticationConverter;
+import com.project.ecom.auth_service.security.ropc.OAuth2PasswordAuthenticationProvider;
+import com.project.ecom.auth_service.security.services.CustomUserDetailsService;
+import com.project.ecom.auth_service.strategies.OAuth2TokenGenerationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -31,7 +40,10 @@ import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -39,18 +51,20 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
 import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
 @EnableWebSecurity
 public class SpringSecurityConfig {
-
     /*
     classic issue: CSRF protection interfering with stateless API access using a bearer token.
 
@@ -98,15 +112,31 @@ public class SpringSecurityConfig {
     /admin/** → only accessible to users with ROLE_ADMIN.
     Everything else → requires login or token.
 
-
      */
 
     @Bean
     @Order(1)
-    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager, OAuth2AuthorizationService oAuth2AuthorizationService, OAuth2TokenGenerator<?> tokenGenerator, OAuth2TokenGenerationStrategy oAuth2TokenGenerationStrategy)
             throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
+
+        // Step 2: Register Password Grant support: ROPC (Resource Owner Password Credentials)
+        authorizationServerConfigurer
+                .tokenEndpoint(tokenEndpoint -> tokenEndpoint
+                        .accessTokenRequestConverters(converters -> {
+                            // Support parsing password grant requests
+                            converters.add(new OAuth2PasswordAuthenticationConverter());
+                        })
+                        .authenticationProviders(providers -> {
+                            // Handle authentication and token generation for password grant
+                            providers.add(new OAuth2PasswordAuthenticationProvider(
+                                    authenticationManager,
+                                    oAuth2AuthorizationService,
+                                    tokenGenerator,
+                                    oAuth2TokenGenerationStrategy
+                            ));
+                        }));
 
         http
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
@@ -135,7 +165,10 @@ public class SpringSecurityConfig {
     @Order(2)
     SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/auth/public/**")  // only matches public apis (requires no auth token)
+                .securityMatcher(new OrRequestMatcher(
+                        new AntPathRequestMatcher("/api/auth/public/**"),
+                        new AntPathRequestMatcher("/api/users/login")
+                ))  // only matches public apis (requires no auth token)
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().permitAll()
                 )
@@ -373,4 +406,31 @@ public class SpringSecurityConfig {
         return converter;
     }
 
+    // required for authenticating username and password (user credentials)
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    // required by DelegatingOAuth2TokenGenerator
+    @Bean
+    public JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) {
+        return new NimbusJwtEncoder(jwkSource);
+    }
+
+    /*
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(CustomUserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationProvider authenticationProvider) {
+        return new ProviderManager(authenticationProvider);
+    }
+
+     */
 }
