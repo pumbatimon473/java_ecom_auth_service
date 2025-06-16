@@ -19,4 +19,7 @@ public class Session extends BaseModel {
 
     @Enumerated(EnumType.STRING)
     private SessionStatus status;
+
+    @Enumerated(EnumType.STRING)  // Repurposing the use of Session to track authentication, email verification and password reset
+    private SessionType type;
 }

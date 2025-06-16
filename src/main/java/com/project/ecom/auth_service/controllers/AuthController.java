@@ -15,8 +15,9 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@Deprecated
 public class AuthController {
-    private IAuthService authService;
+    private final IAuthService authService;
 
     @Autowired
     public AuthController(IAuthService authService) {

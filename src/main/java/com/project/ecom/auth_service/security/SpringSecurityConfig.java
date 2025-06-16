@@ -68,11 +68,11 @@ public class SpringSecurityConfig {
     /*
     classic issue: CSRF protection interfering with stateless API access using a bearer token.
 
-    🔍 What's Happening
+    >> What's Happening
     You're sending a Bearer <access-token> in the Authorization header (which is correct for OAuth2), but Spring Security's CSRF protection is still active, and it's rejecting your request because it's a POST without a CSRF token.
     This is normal behavior when CSRF protection is enabled and sessions are used — which isn't the case for OAuth2 resource servers, where everything is stateless.
 
-    🧠 Why disable CSRF for APIs?
+    >> Why disable CSRF for APIs?
     CSRF is only required for cookie-based session authentication (like browser logins).
     If you're using OAuth2 Bearer tokens in Authorization header, you're already protected.
     So CSRF is redundant and counterproductive for stateless APIs.
@@ -80,12 +80,12 @@ public class SpringSecurityConfig {
     Meaning of: authorize.anyRequest().authenticated()
     - Every HTTP request, regardless of its path or method, must be authenticated — i.e., the user must be logged in or present a valid token.
 
-    🔍 Breakdown
+    >> Breakdown
     authorize — this is the authorization configuration block.
     .anyRequest() — matches all requests, including static assets (/css/**, /favicon.ico, etc.).
     .authenticated() — requires the request to be made by an authenticated principal (user or client).
 
-    🔒 What it enforces
+    >> What it enforces
     It ensures that:
     For login-based flows: the user must be logged in via a form.
     For OAuth2: the client must send a valid Authorization: Bearer <token> header.
@@ -94,14 +94,14 @@ public class SpringSecurityConfig {
     Redirects to the login page (for browser requests), or
     Returns 401 Unauthorized (for API requests with missing/invalid tokens).
 
-    🧠 Common Alternatives
+    >> Common Alternatives
     Code	Meaning
     .permitAll()	Allow access to this request path without authentication.
     .denyAll()	Deny all access — return 403 for everyone.
     .hasRole("ADMIN")	Allow access only if the authenticated user has the ROLE_ADMIN authority.
     .hasAuthority("SCOPE_read")	Used in OAuth2 to check for scopes in JWT.
 
-    👇 Example
+    >> Example
     http
       .authorizeHttpRequests(authorize -> authorize
           .requestMatchers("/public/**").permitAll()
@@ -167,7 +167,9 @@ public class SpringSecurityConfig {
         http
                 .securityMatcher(new OrRequestMatcher(
                         new AntPathRequestMatcher("/api/auth/public/**"),
-                        new AntPathRequestMatcher("/api/users/login")
+                        new AntPathRequestMatcher("/api/users/login"),
+                        new AntPathRequestMatcher("/api/users/reset-password"),
+                        new AntPathRequestMatcher("/api/users/reset-password/confirm")
                 ))  // only matches public apis (requires no auth token)
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().permitAll()
@@ -177,22 +179,22 @@ public class SpringSecurityConfig {
     }
 
     /*
-    🧨 Issue
+    >> Issue
     Your defaultSecurityFilterChain is treating all requests (including API endpoints) as stateful form login-based requests and does not disable CSRF, which breaks stateless requests authenticated via Authorization: Bearer.
 
-    ✅ What to Fix
+    >> What to Fix
     You need to update your defaultSecurityFilterChain to:
     Disable CSRF for stateless endpoints (e.g., /api/**).
     Enable OAuth2 Resource Server support (so it validates JWTs or opaque tokens).
 
-    🧨 Issue
+    >> Issue
     Authorization token (if passed) is still being validated for permitted requests (signup and login)
 
     Reason:
     permitAll() only affects authorization.
     But the Bearer-token authentication filter runs before authorization; if it sees an Authorization: Bearer … header it must try to validate it.
 
-    ✅ Fix:
+    >> Fix:
     To ignore any Bearer token on selected paths you have two good options.
     1) Put the public endpoints in their own filter-chain (simplest)
     2) Keep one chain and use a custom BearerTokenResolver
@@ -233,7 +235,7 @@ public class SpringSecurityConfig {
         http
             ...
             .oauth2ResourceServer(oauth2 -> oauth2
-                .bearerTokenResolver(bearerTokenResolver())   // ⬅️ plug it in
+                .bearerTokenResolver(bearerTokenResolver())   // <- plug it in
                 .jwt(jwt -> jwt.decoder(jwtDecoder()))
             ...
     }
@@ -285,7 +287,7 @@ public class SpringSecurityConfig {
         - Tried everything but could not make it work!
         - Using BCryptPasswordEncoder as the default password encoder
 
-    ✅ When does {noop} work?
+    >> When does {noop} work?
     {noop} only works if you're using a DelegatingPasswordEncoder which supports {noop} as a prefix.
     This DelegatingPasswordEncoder looks at the prefix ({noop}, {bcrypt}, etc.) and chooses the correct encoder.
 
@@ -379,14 +381,14 @@ public class SpringSecurityConfig {
     }
 
     /*
-    🧨 Issue
+    >> Issue
     BadJwtException: An error occurred while attempting to decode the Jwt: Signed JWT rejected: Another algorithm expected, or no matching key(s) found
     Since I am using JJWT token, spring has no idea about how to decode it when "OAuth2 Resource Server" is enabled
     .oauth2ResourceServer(oauth2 -> oauth2
         .jwt(Customizer.withDefaults())  // Expects spring generated JWT signed with RS256
     )
 
-    ✅ Fix
+    >> Fix
     Add custom decoder bean: Decodes a JWT signed with HS256 (HMAC + secret) - generated using JJWT
 
      */

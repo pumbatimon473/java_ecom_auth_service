@@ -7,9 +7,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class LoginRequestDto {
-    @Email(message = "Registered email is required")
+public class PasswordResetRequestDto {
+    @NotBlank(message = "Email is required")
+    @Email(message = "Not a valid email")
     private String email;
-    @NotBlank(message = "Password is required")
-    private String password;
 }

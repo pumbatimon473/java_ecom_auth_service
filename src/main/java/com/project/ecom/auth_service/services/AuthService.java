@@ -18,9 +18,10 @@ import java.util.Calendar;
 import java.util.Optional;
 
 @Service
+@Deprecated
 public class AuthService implements IAuthService {
-    private IUserRepository userRepo;
-    private ISessionRepository sessionRepo;
+    private final IUserRepository userRepo;
+    private final ISessionRepository sessionRepo;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
