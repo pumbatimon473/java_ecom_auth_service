@@ -18,6 +18,7 @@ import java.text.ParseException;
 
 @RestController
 @RequestMapping("/api")
+@Deprecated
 public class SellerController {
     private final ISellerService sellerService;
 

@@ -1,6 +1,7 @@
 package com.project.ecom.auth_service.services;
 
 import com.project.ecom.auth_service.dtos.AccessTokenResponse;
+import com.project.ecom.auth_service.dtos.UserInfoResponse;
 import com.project.ecom.auth_service.exceptions.UserAlreadyExistsException;
 import com.project.ecom.auth_service.exceptions.UserNotFoundException;
 import com.project.ecom.auth_service.models.Session;
@@ -130,5 +131,12 @@ public class UserService implements IUserService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         return this.userRepo.save(user);
+    }
+
+    @Override
+    public UserInfoResponse getBasicUserInfo(Long userId) {
+        User user = this.userRepo.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+        return UserInfoResponse.from(user);
     }
 }

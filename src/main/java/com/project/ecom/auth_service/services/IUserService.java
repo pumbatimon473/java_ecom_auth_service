@@ -1,6 +1,7 @@
 package com.project.ecom.auth_service.services;
 
 import com.project.ecom.auth_service.dtos.AccessTokenResponse;
+import com.project.ecom.auth_service.dtos.UserInfoResponse;
 import com.project.ecom.auth_service.models.User;
 
 import java.text.ParseException;
@@ -15,4 +16,6 @@ public interface IUserService {
     void confirmPasswordReset(String newPassword, String resetToken) throws ParseException;
 
     User register(String email, String password, String firstName, String lastName);
+
+    UserInfoResponse getBasicUserInfo(Long userId);
 }

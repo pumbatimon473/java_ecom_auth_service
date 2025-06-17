@@ -169,7 +169,8 @@ public class SpringSecurityConfig {
                         new AntPathRequestMatcher("/api/auth/public/**"),
                         new AntPathRequestMatcher("/api/users/login"),
                         new AntPathRequestMatcher("/api/users/reset-password"),
-                        new AntPathRequestMatcher("/api/users/reset-password/confirm")
+                        new AntPathRequestMatcher("/api/users/reset-password/confirm"),
+                        new AntPathRequestMatcher("/api/users/basic-info/**")
                 ))  // only matches public apis (requires no auth token)
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().permitAll()

@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
+@Deprecated
 public class SellerService implements ISellerService {
     private final IUserRepository userRepo;
     private final ISellerRegistrationRequestRepository sellerRegistrationRequestRepo;

@@ -7,6 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
+@Deprecated
 public class SellerRegistrationRequest extends BaseModel {
     @ManyToOne
     @JoinColumn(name = "user_id")

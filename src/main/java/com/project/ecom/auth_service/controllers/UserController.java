@@ -8,10 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
 
@@ -54,5 +51,11 @@ public class UserController {
     public ResponseEntity<String> confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequestDto requestDto) throws ParseException {
         this.userService.confirmPasswordReset(requestDto.getNewPassword(), requestDto.getResetToken());
         return ResponseEntity.ok("Password has been reset!");
+    }
+
+    @GetMapping("/basic-info/{id}")
+    public ResponseEntity<UserInfoResponse> getBasicUserInfo(@PathVariable(name = "id") Long userId) {
+        UserInfoResponse userInfoResponse = this.userService.getBasicUserInfo(userId);
+        return ResponseEntity.ok(userInfoResponse);
     }
 }
