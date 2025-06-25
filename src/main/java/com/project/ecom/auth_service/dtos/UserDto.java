@@ -22,7 +22,8 @@ public class UserDto {
         userDto.setFirstName(user.getFirstName());
         userDto.setLastName(user.getLastName());
         userDto.setEmail(user.getEmail());
-        userDto.setRoles(user.getRoles().stream().map(Role::getName).toList());
+        if (user.getRoles() != null)
+            userDto.setRoles(user.getRoles().stream().map(Role::getName).toList());
         return userDto;
     }
 }

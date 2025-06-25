@@ -167,6 +167,7 @@ public class SpringSecurityConfig {
         http
                 .securityMatcher(new OrRequestMatcher(
                         new AntPathRequestMatcher("/api/auth/public/**"),
+                        new AntPathRequestMatcher("/api/users/register"),
                         new AntPathRequestMatcher("/api/users/login"),
                         new AntPathRequestMatcher("/api/users/reset-password"),
                         new AntPathRequestMatcher("/api/users/reset-password/confirm"),
