@@ -121,13 +121,14 @@ public class UserService implements IUserService {
 
     @Override
     public User register(String email, String password, String firstName, String lastName) {
+        email = email.toLowerCase().trim();
         Optional<User> userOptional = this.userRepo.findByEmail(email);
         if (userOptional.isPresent())
             throw new UserAlreadyExistsException(email);
         // create a new user
         User user = new User();
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
+        user.setFirstName(firstName.trim());
+        user.setLastName(lastName.trim());
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         return this.userRepo.save(user);

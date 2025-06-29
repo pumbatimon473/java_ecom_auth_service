@@ -34,4 +34,10 @@ public class RoleController {
         this.roleService.setRolesToUser(requestDto.getRoleNames(), requestDto.getUserId());
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/add")
+    ResponseEntity<Void> addRolesToUser(@RequestBody SetRolesToUserReqDto requestDto) {
+        this.roleService.addRolesToUser(requestDto.getRoleNames(), requestDto.getUserId());
+        return ResponseEntity.noContent().build();
+    }
 }

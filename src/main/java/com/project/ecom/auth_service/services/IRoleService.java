@@ -8,4 +8,6 @@ public interface IRoleService {
     Role createNewRole(String name);
 
     void setRolesToUser(List<String> roleNames, Long userId);
+
+    void addRolesToUser(List<String> roleNames, Long userId);
 }

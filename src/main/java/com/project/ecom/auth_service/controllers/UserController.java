@@ -23,13 +23,13 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<UserDto> register(@Valid @RequestBody SignupRequestDto requestDto) {
-        User user = this.userService.register(requestDto.getEmail(), requestDto.getPassword(), requestDto.getFirstName(), requestDto.getLastName());
+        User user = this.userService.register(requestDto.getEmail().toLowerCase().trim(), requestDto.getPassword(), requestDto.getFirstName().trim(), requestDto.getLastName().trim());
         return ResponseEntity.status(HttpStatus.CREATED).body(UserDto.from(user));
     }
 
     @PostMapping("/login")
     public ResponseEntity<AccessTokenResponse> login(@Valid @RequestBody LoginRequestDto requestDto) {
-        AccessTokenResponse accessTokenResponse = this.userService.login(requestDto.getEmail(), requestDto.getPassword());
+        AccessTokenResponse accessTokenResponse = this.userService.login(requestDto.getEmail().toLowerCase().trim(), requestDto.getPassword());
         return ResponseEntity.ok(accessTokenResponse);
     }
 
@@ -43,7 +43,7 @@ public class UserController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody PasswordResetRequestDto requestDto) throws ParseException {
-        this.userService.resetPassword(requestDto.getEmail());
+        this.userService.resetPassword(requestDto.getEmail().toLowerCase().trim());
         return ResponseEntity.ok("Password reset link has been sent to the registered email id.");
     }
 

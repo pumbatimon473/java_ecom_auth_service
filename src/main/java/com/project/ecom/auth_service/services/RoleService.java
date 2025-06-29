@@ -10,9 +10,8 @@ import com.project.ecom.auth_service.repositories.IUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class RoleService implements IRoleService {
@@ -39,15 +38,33 @@ public class RoleService implements IRoleService {
 
     @Override
     public void setRolesToUser(List<String> roleNames, Long userId) {
-        List<Role> roles = new ArrayList<>();
-        for (String roleName : roleNames) {
+        Set<Role> roles = getRoles(roleNames);
+        User user = this.userRepo.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+        user.setRoles(new ArrayList<>(roles));
+        this.userRepo.save(user);
+    }
+
+    private Set<Role> getRoles(List<String> roleNames) {
+        Set<String> uniqueRoleNames = roleNames.stream().map(name -> name.toLowerCase().trim()).collect(Collectors.toSet());
+        Set<Role> roles = new HashSet<>();
+        for (String roleName : uniqueRoleNames) {
             Role role = this.roleRepo.findByNameIgnoreCase(roleName.trim())
                     .orElseThrow(() -> new RoleNotFoundException(roleName.toUpperCase().trim()));
             roles.add(role);
         }
+        return roles;
+    }
+
+    @Override
+    public void addRolesToUser(List<String> roleNames, Long userId) {
+        Set<Role> roles = getRoles(roleNames);
         User user = this.userRepo.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
-        user.setRoles(roles);
+        List<Role> userRoles = user.getRoles();
+        if (userRoles == null) userRoles = new ArrayList<>();
+        roles.addAll(userRoles);
+        user.setRoles(new ArrayList<>(roles));
         this.userRepo.save(user);
     }
 }
