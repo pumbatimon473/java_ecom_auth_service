@@ -15,6 +15,7 @@ import java.util.UUID;
 
 @SpringBootTest
 public class TestRegisterPostmanClient {
+    private final String POSTMAN_CLIENT = "postman";
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
@@ -22,20 +23,22 @@ public class TestRegisterPostmanClient {
 
     @Test
     public void testRegisterPostmanClient() {
-        RegisteredClient postmanClient = RegisteredClient.withId(UUID.randomUUID().toString())
-                .clientId("postman")
-                .clientSecret(passwordEncoder.encode("secret"))  // {noop} stands for "No Operation" for password encoding
-                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                // .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")  // Test with Browser
-                .redirectUri("https://oauth.pstmn.io/v1/callback")  // Test with Postman
-                .postLogoutRedirectUri("http://127.0.0.1:8080/")
-                .scope(OidcScopes.OPENID)
-                .scope(OidcScopes.PROFILE)
-                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
-                .build();
+        if (registeredClientRepository.findByClientId(POSTMAN_CLIENT) == null) {
+            RegisteredClient postmanClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                    .clientId(POSTMAN_CLIENT)
+                    .clientSecret(passwordEncoder.encode("secret"))  // {noop} stands for "No Operation" for password encoding
+                    .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                    // .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")  // Test with Browser
+                    .redirectUri("https://oauth.pstmn.io/v1/callback")  // Test with Postman
+                    .postLogoutRedirectUri("http://127.0.0.1:8080/")
+                    .scope(OidcScopes.OPENID)
+                    .scope(OidcScopes.PROFILE)
+                    .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+                    .build();
 
-        registeredClientRepository.save(postmanClient);
+            registeredClientRepository.save(postmanClient);
+        }
     }
 }
