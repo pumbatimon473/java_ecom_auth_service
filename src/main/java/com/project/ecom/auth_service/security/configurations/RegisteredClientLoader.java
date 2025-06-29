@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 
@@ -18,6 +19,7 @@ import java.util.UUID;
 @Configuration
 public class RegisteredClientLoader {
     public static final String ECOM_CLIENT = "ecom-app";
+    public static final String POSTMAN_CLIENT = "postman";
 
     @Bean
     public CommandLineRunner registerEcomClient(PasswordEncoder passwordEncoder, RegisteredClientRepository registeredClientRepository) {
@@ -38,6 +40,29 @@ public class RegisteredClientLoader {
                         .build();
 
                 registeredClientRepository.save(ecomClient);
+            }
+        };
+    }
+
+    @Bean
+    public CommandLineRunner registerPostmanClient(PasswordEncoder passwordEncoder, RegisteredClientRepository registeredClientRepository) {
+        return args -> {
+            if (registeredClientRepository.findByClientId(POSTMAN_CLIENT) == null) {
+                RegisteredClient postmanClient = RegisteredClient.withId(UUID.randomUUID().toString())
+                        .clientId(POSTMAN_CLIENT)
+                        .clientSecret(passwordEncoder.encode("secret"))  // {noop} stands for "No Operation" for password encoding
+                        .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                        .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                        // .redirectUri("http://127.0.0.1:8080/login/oauth2/code/oidc-client")  // Test with Browser
+                        .redirectUri("https://oauth.pstmn.io/v1/callback")  // Test with Postman
+                        .postLogoutRedirectUri("http://127.0.0.1:8080/")
+                        .scope(OidcScopes.OPENID)
+                        .scope(OidcScopes.PROFILE)
+                        .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
+                        .build();
+
+                registeredClientRepository.save(postmanClient);
             }
         };
     }
