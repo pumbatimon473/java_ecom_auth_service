@@ -124,3 +124,14 @@ ngrok http http://localhost:8080
 > NOTE:
 Generating App Password: https://support.google.com/accounts/answer/185833
 
+# Project Setup
+- Once the "auth_service" runs,
+	- It creates an admin user with id 1 with standard roles: ADMIN, SELLER
+		- You can fetch the basic details of the user through the endpoint: /api/users/basic-info/:id
+	- It also registers the following OAuth clients:
+		- "ecom-app": (GrantType: password)
+		- "postman": (GrantType: authorization_code)
+		> client secret is "secret"
+- You can populate dummy product details by running the test "FakeStoreApiClientTest" available in "java_project_ecom"
+	- It tries to fetch the product data from the fakestore api.
+
