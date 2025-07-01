@@ -1,4 +1,4 @@
-# Steps for deployment in local machine
+# Steps for deployment on the local machine
 
 ## Services:
 - java_project_ecom
@@ -15,7 +15,7 @@
 - MySQL DB must be installed and have the following db schemas created:
 	- ecom_auth_service
 	- ecom
-- Use docker images for the Elasticsearch, Mongo, Redis, Kafka
+- Use Docker images for Elasticsearch, Mongo, Redis, Kafka
 
 ### Elasticsearch: docker-compose.yml
 ```yaml
@@ -67,12 +67,12 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 ```
-- Mongo DB must have the below database created beforehand
+- MongoDB must have the following database created beforehand
     - Database: ecom_cart_service
     - Collection: cart
 
 
-### 1. Ensure the below environment variables are configured before running the services
+### 1. Ensure the following environment variables are configured before running the services
 
 #### 1.1 java_ecom_auth_service:
 
@@ -91,7 +91,7 @@ services:
 - ECOM_DB_URL	= jdbc:mysql://localhost:3306/ecom
 - ECOM_DB_USERNAME = admin
 - ECOM_DB_PASSWORD = root
-- ECOM_APP_BASE_URL =	http://localhost:8080 (NOTE: A public app url is required for the payment callbacks to work)
+- ECOM_APP_BASE_URL =	http://localhost:8080 (NOTE: A public app URL is required for the payment callbacks to work)
 - STRIPE_TEST_SECRET_KEY = <your_stripe_secret_key>
 - RAZORPAY_TEST_KEY_ID = <your_razorpay_key_id>
 - RAZORPAY_TEST_KEY_SECRET = <your_razorpay_secret>
@@ -99,7 +99,7 @@ services:
 - KAFKA_SERVER = localhost:29092
 - ECOM_ES_HOST_AND_PORT = localhost:9200
 
-> NOTE: You can obtain a public url through Ngrok
+> NOTE: You can obtain a public URL through Ngrok
 CMD:
 ngrok http http://localhost:8080
 
@@ -128,6 +128,7 @@ Generating App Password: https://support.google.com/accounts/answer/185833
 - Once the "auth_service" runs,
 	- It creates an admin user with id 1 with standard roles: ADMIN, SELLER
 		- You can fetch the basic details of the user through the endpoint: /api/users/basic-info/:id
+		- The default password is 1234
 	- It also registers the following OAuth clients:
 		- "ecom-app": (GrantType: password)
 		- "postman": (GrantType: authorization_code)
